@@ -90,7 +90,9 @@ export default function Home() {
 								alt="Sample Image"
 								width={500}
 								height={500}
+								placeholder="blur"
 								className="h-auto w-full rounded-t-md"
+								style={{ aspectRatio: sampleImageSrc.width / sampleImageSrc.height }}
 							/>
 						)}
 
