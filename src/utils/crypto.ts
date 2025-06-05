@@ -34,16 +34,14 @@ export async function decryptData({
 	email,
 	password,
 	data,
-	recoveryString,
+	recovery,
 }: {
 	email: string
 	password?: string
 	data: string
-	recoveryString?: string
+	recovery?: string
 }): Promise<string> {
-	const masterKey = recoveryString
-		? await recoverMasterKey(email, recoveryString)
-		: await deriveMasterKey(email, password ?? "")
+	const masterKey = recovery ? await recoverMasterKey(email, recovery) : await deriveMasterKey(email, password ?? "")
 
 	return decryptWithMasterKey(masterKey, data)
 }

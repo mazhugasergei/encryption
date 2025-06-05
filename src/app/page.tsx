@@ -66,7 +66,7 @@ export default function Home() {
 			email,
 			password,
 			data,
-			recoveryString,
+			recovery,
 		}).catch(handleError)
 		if (!decrypted) return
 		setData(decrypted)
