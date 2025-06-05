@@ -64,9 +64,9 @@ export default function Home() {
 		if (!data) return
 		const decrypted = await decryptData({
 			email,
-			passwordOrRecovery: recovery || password,
+			password,
 			data,
-			isRecovery: !!recovery.length,
+			recoveryString,
 		}).catch(handleError)
 		if (!decrypted) return
 		setData(decrypted)
