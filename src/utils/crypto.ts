@@ -8,9 +8,9 @@ async function deriveMasterKey(email: string, password: string): Promise<Buffer>
 	return await pbkdf2Async(password, salt, 100000, 32, "sha256")
 }
 
-async function deriveRecoveryKey(email: string, recoverySecret: string): Promise<Buffer> {
-	const salt = Buffer.from(email, "utf8")
-	return await pbkdf2Async(recoverySecret, salt, 100000, 32, "sha256")
+export async function getMasterKeyBase64(email: string, password: string): Promise<string> {
+	const masterKey = await deriveMasterKey(email, password)
+	return masterKey.toString("base64")
 }
 
 export async function encryptData({
@@ -33,41 +33,23 @@ export async function encryptData({
 export async function decryptData({
 	email,
 	password,
+	recoveryMasterKey: masterKeyBase64,
 	data,
-	recovery,
 }: {
 	email: string
-	password?: string
 	data: string
-	recovery?: string
+	password?: string
+	recoveryMasterKey?: string
 }): Promise<string> {
-	const masterKey = recovery ? await recoverMasterKey(email, recovery) : await deriveMasterKey(email, password ?? "")
-
+	let masterKey: Buffer
+	if (masterKeyBase64) {
+		masterKey = Buffer.from(masterKeyBase64, "base64")
+	} else if (password) {
+		masterKey = await deriveMasterKey(email, password)
+	} else {
+		throw new Error("Either password or masterKeyBase64 must be provided")
+	}
 	return decryptWithMasterKey(masterKey, data)
-}
-
-export async function createRecoveryString(email: string, password: string): Promise<string> {
-	const masterKey = await deriveMasterKey(email, password)
-	const recoverySecret = randomBytes(32)
-	const recoveryKey = await deriveRecoveryKey(email, recoverySecret.toString("base64"))
-	const iv = randomBytes(16)
-	const cipher = createCipheriv("aes-256-cbc", recoveryKey, iv)
-	let encryptedKey = cipher.update(masterKey)
-	encryptedKey = Buffer.concat([encryptedKey, cipher.final()])
-	const combined = Buffer.concat([recoverySecret, iv, encryptedKey])
-	return combined.toString("base64")
-}
-
-export async function recoverMasterKey(email: string, combinedRecoveryString: string): Promise<Buffer> {
-	const data = Buffer.from(combinedRecoveryString, "base64")
-	const recoverySecret = data.slice(0, 32).toString("base64")
-	const iv = data.slice(32, 48)
-	const encrypted = data.slice(48)
-	const recoveryKey = await deriveRecoveryKey(email, recoverySecret)
-	const decipher = createDecipheriv("aes-256-cbc", recoveryKey, iv)
-	let decrypted = decipher.update(encrypted)
-	decrypted = Buffer.concat([decrypted, decipher.final()])
-	return decrypted
 }
 
 export function decryptWithMasterKey(masterKey: Buffer, secret: string): string {
@@ -78,4 +60,9 @@ export function decryptWithMasterKey(masterKey: Buffer, secret: string): string 
 	let decrypted = decipher.update(encrypted)
 	decrypted = Buffer.concat([decrypted, decipher.final()])
 	return decrypted.toString("utf8")
+}
+
+export async function exportMasterKey(email: string, password: string): Promise<string> {
+	const masterKey = await deriveMasterKey(email, password)
+	return masterKey.toString("base64")
 }
