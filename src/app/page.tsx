@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { Wrapper } from "@/components/wrapper"
 import { handleError, imageToBase64 } from "@/utils"
-import { decryptData, encryptData, getMasterKeyBase64 } from "@/utils/crypto"
+import { createRecoveryString, decryptData, encryptData } from "@/utils/crypto"
 import Image from "next/image"
 import { useEffect, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
@@ -18,7 +18,7 @@ import { Controller, useForm } from "react-hook-form"
 type FormData = {
 	email: string
 	password: string
-	recoveryMasterKey: string
+	recovery: string
 }
 
 export default function Home() {
@@ -31,21 +31,21 @@ export default function Home() {
 		defaultValues: {
 			email: "myemail@example.com",
 			password: "strongpassword",
-			recoveryMasterKey: "",
+			recovery: "",
 		},
 	})
 
 	const email = watch("email")
 	const password = watch("password")
-	const recoveryMasterKey = watch("recoveryMasterKey")
+	const recovery = watch("recovery")
 
 	const [data, setData] = useState<string>("")
-	const [masterKey, setMasterKey] = useState<string>("")
+	const [recoveryString, setRecoveryString] = useState<string>("")
 	const [isEncrypted, setIsEncrypted] = useState(false)
 
 	useEffect(() => {
 		imageToBase64(sampleImageSrc).then(setData).catch(handleError)
-		getMasterKeyBase64(email, password).then(setMasterKey).catch(handleError)
+		createRecoveryString(email, password).then(setRecoveryString).catch(handleError)
 	}, [])
 
 	const handleEncrypt = async () => {
@@ -66,7 +66,7 @@ export default function Home() {
 			email,
 			password,
 			data,
-			recoveryMasterKey,
+			recovery,
 		}).catch(handleError)
 		if (!decrypted) return
 		setData(decrypted)
@@ -149,9 +149,7 @@ export default function Home() {
 										<Controller
 											name="password"
 											control={control}
-											render={({ field }) => (
-												<PasswordInput {...field} disabled={isEncrypted && !!recoveryMasterKey.length} />
-											)}
+											render={({ field }) => <PasswordInput {...field} disabled={isEncrypted && !!recovery.length} />}
 										/>
 									</TableCell>
 								</TableRow>
@@ -161,7 +159,7 @@ export default function Home() {
 										<p className="text-muted-foreground text-xs">(if forgot password)</p>
 									</TableCell>
 									<TableCell className="w-full">
-										<DragToScrollString data={masterKey} showCopyButton />
+										<DragToScrollString data={recoveryString} showCopyButton />
 									</TableCell>
 								</TableRow>
 								<TableRow className="!bg-transparent">
@@ -171,7 +169,7 @@ export default function Home() {
 									</TableCell>
 									<TableCell className="w-full">
 										<Controller
-											name="recoveryMasterKey"
+											name="recovery"
 											control={control}
 											render={({ field }) => <Input {...field} disabled={!isEncrypted} />}
 										/>
